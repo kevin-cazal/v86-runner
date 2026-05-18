@@ -114,5 +114,5 @@ stateRaw.copy(out, stateOffset);
 
 writeFileSync(outPath, out);
 console.log(
-  `Wrote ${outPath} (V86B v2): seabios ${seabios.length}, vgabios ${vgabios.length}, disk ${disk.length}, state zstd ${stateRaw.length}, total ${total}`,
+  `Wrote ${outPath} (V86B v1): seabios ${seabios.length}, vgabios ${vgabios.length}, disk ${disk.length}, state zstd ${stateRaw.length}, total ${total}`,
 );

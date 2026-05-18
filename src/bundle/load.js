@@ -2,7 +2,6 @@ import { decompress } from "fzstd";
 import {
   parseV86BundleHeader,
   V86B_HEADER_SIZE,
-  V86B_VERSION,
   v86BundlePayloadBytes,
   validateV86BundleLayout,
 } from "./format.js";
@@ -13,8 +12,8 @@ import {
  *   label: string,
  *   initialStateBuffer: ArrayBuffer,
  *   memorySize: number,
- *   biosBuffer?: ArrayBuffer,
- *   vgaBiosBuffer?: ArrayBuffer,
+ *   biosBuffer: ArrayBuffer,
+ *   vgaBiosBuffer: ArrayBuffer,
  * }} V86BundleLoadResult
  */
 
@@ -65,20 +64,16 @@ export async function loadV86Bundle(file, { readSlice, onProgress }) {
     return buf;
   };
 
-  let biosBuffer;
-  let vgaBiosBuffer;
-  if (header.version >= V86B_VERSION && header.seabiosSize > 0) {
-    biosBuffer = await readSection(
-      header.seabiosOffset,
-      header.seabiosSize,
-      "Loading SeaBIOS…",
-    );
-    vgaBiosBuffer = await readSection(
-      header.vgabiosOffset,
-      header.vgabiosSize,
-      "Loading VGA BIOS…",
-    );
-  }
+  const biosBuffer = await readSection(
+    header.seabiosOffset,
+    header.seabiosSize,
+    "Loading SeaBIOS…",
+  );
+  const vgaBiosBuffer = await readSection(
+    header.vgabiosOffset,
+    header.vgabiosSize,
+    "Loading VGA BIOS…",
+  );
 
   const diskBuffer = await readSection(
     header.diskOffset,

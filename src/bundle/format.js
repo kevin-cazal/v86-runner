@@ -3,8 +3,10 @@
 export const V86B_MAGIC = 0x42363856; // "V86B" little-endian
 /** @deprecated Pre-release magic; still accepted when reading. */
 export const V86B_LEGACY_SRG1_MAGIC = 0x31475253;
-export const V86B_VERSION_V1 = 1;
-export const V86B_VERSION = 2;
+/** Current on-disk format version (embedded seabios + vgabios + disk + zstd state). */
+export const V86B_VERSION = 1;
+/** @deprecated Bundles packed before v1 renumbering; same layout as {@link V86B_VERSION}. */
+export const V86B_VERSION_LEGACY = 2;
 export const V86B_HEADER_SIZE = 64;
 export const V86B_DEFAULT_MEMORY = 512 * 1024 * 1024;
 export const V86B_MAX_DISK_BYTES = 2 * 1024 * 1024 * 1024;
@@ -33,6 +35,10 @@ function assertBundleMagic(magic) {
   }
 }
 
+function isSupportedBundleVersion(version) {
+  return version === V86B_VERSION || version === V86B_VERSION_LEGACY;
+}
+
 /**
  * @param {ArrayBuffer} buf Must be at least 64 bytes.
  * @returns {V86BundleHeader}
@@ -45,35 +51,7 @@ export function parseV86BundleHeader(buf) {
   const flags = view.getUint16(6, true);
   const memorySize = view.getUint32(8, true);
 
-  if (version === V86B_VERSION_V1) {
-    const diskSize = view.getUint32(12, true);
-    const stateZstdSize = view.getUint32(16, true);
-    const diskOffset = view.getUint32(20, true);
-    const stateOffset = view.getUint32(24, true);
-    const v86StateVersion = view.getUint32(28, true);
-    if (diskOffset !== V86B_HEADER_SIZE) {
-      throw new Error(`Unexpected disk_offset ${diskOffset}`);
-    }
-    if (stateOffset !== diskOffset + diskSize) {
-      throw new Error(`Unexpected state_offset ${stateOffset}`);
-    }
-    return {
-      version,
-      flags,
-      memorySize,
-      seabiosSize: 0,
-      vgabiosSize: 0,
-      diskSize,
-      stateZstdSize,
-      seabiosOffset: 0,
-      vgabiosOffset: 0,
-      diskOffset,
-      stateOffset,
-      v86StateVersion,
-    };
-  }
-
-  if (version !== V86B_VERSION) {
+  if (!isSupportedBundleVersion(version)) {
     throw new Error(`Unsupported V86 bundle version ${version}`);
   }
 
@@ -149,8 +127,8 @@ export function validateV86BundleLayout(header, fileSize) {
 /** @param {V86BundleHeader} header */
 export function v86BundlePayloadBytes(header) {
   return (
-    (header.seabiosSize || 0) +
-    (header.vgabiosSize || 0) +
+    header.seabiosSize +
+    header.vgabiosSize +
     header.diskSize +
     header.stateZstdSize
   );
