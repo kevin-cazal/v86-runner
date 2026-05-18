@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VM serial console</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="toolbar">
+      <h1 id="page-title">VM serial console</h1>
+      <span id="status" class="status">Choose a disk image</span>
+      <div id="menu-root" class="menu-root"></div>
+    </header>
+    <input
+      id="state-input"
+      type="file"
+      accept=".v86state,application/octet-stream"
+      hidden
+    />
+    <div id="pick-overlay" class="load-overlay" aria-live="polite">
+      <p class="pick-lead">Open your Alpine VM disk locally (no download).</p>
+      <p class="pick-hint">
+        Raw BIOS disk image — usually <code>alpine-bios-*.img</code>
+      </p>
+      <label class="pick-btn">
+        Choose disk image…
+        <input
+          id="disk-input"
+          type="file"
+          accept=".img,.raw,application/octet-stream"
+        />
+      </label>
+      <p id="pick-error" class="pick-error" hidden></p>
+    </div>
+    <div id="load-overlay" class="load-overlay" hidden aria-live="polite">
+      <p id="load-message">Loading…</p>
+      <progress id="load-progress" max="100" value="0"></progress>
+    </div>
+    <main id="terminal-wrap" class="terminal-wrap" hidden>
+      <div id="terminal" class="terminal-host"></div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/v86.wasm
+public/assets/seabios.bin
+public/assets/vgabios.bin
+*.img
+public/assets/*.img

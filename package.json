@@ -1,0 +1,19 @@
+{
+  "name": "v86-runner",
+  "private": true,
+  "type": "module",
+  "description": "Browser Alpine VM runner (v86 + xterm serial console)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "v86": "^0.5.357"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
