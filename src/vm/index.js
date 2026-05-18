@@ -1,13 +1,14 @@
 import { V86 } from "v86";
+import { assetUrl } from "../util/assetUrl.js";
 
 const DEFAULT_MEMORY = 512 * 1024 * 1024;
 const textEncoder = new TextEncoder();
 
 export async function checkBiosAssets() {
   const [bios, vga, wasm] = await Promise.all([
-    fetch("/assets/seabios.bin", { method: "HEAD" }),
-    fetch("/assets/vgabios.bin", { method: "HEAD" }),
-    fetch("/v86.wasm", { method: "HEAD" }),
+    fetch(assetUrl("assets/seabios.bin"), { method: "HEAD" }),
+    fetch(assetUrl("assets/vgabios.bin"), { method: "HEAD" }),
+    fetch(assetUrl("v86.wasm"), { method: "HEAD" }),
   ]);
   if (!bios.ok || !vga.ok || !wasm.ok) {
     throw new Error(
@@ -88,9 +89,9 @@ export function createVmEmulator({
       }
 
       emulator = new V86({
-        wasm_path: "/v86.wasm",
-        bios: { url: "/assets/seabios.bin" },
-        vga_bios: { url: "/assets/vgabios.bin" },
+        wasm_path: assetUrl("v86.wasm"),
+        bios: { url: assetUrl("assets/seabios.bin") },
+        vga_bios: { url: assetUrl("assets/vgabios.bin") },
         hda: { buffer: diskBuffer },
         memory_size: memorySize,
         virtio_console: true,

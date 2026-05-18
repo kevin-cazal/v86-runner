@@ -24,6 +24,8 @@ npm run build
 npm run preview
 ```
 
+Built assets use a **relative base** (`./`) so the whole `dist/` folder can be served under a path prefix (e.g. nginx `location /lab/`). Runtime paths use `import.meta.env.BASE_URL` via `src/util/assetUrl.js`. Override with `VITE_BASE=/your-prefix/` if you need an absolute prefix instead.
+
 ## Plugin API
 
 Import `./app.js` from a custom entry, or call `registerPluginMenu` from `src/menu/` (see source).
