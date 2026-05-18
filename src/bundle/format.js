@@ -1,12 +1,7 @@
 /** V86B — v86-runner single-file VM bundle (header + BIOS + disk + zstd state). */
 
 export const V86B_MAGIC = 0x42363856; // "V86B" little-endian
-/** @deprecated Pre-release magic; still accepted when reading. */
-export const V86B_LEGACY_SRG1_MAGIC = 0x31475253;
-/** Current on-disk format version (embedded seabios + vgabios + disk + zstd state). */
 export const V86B_VERSION = 1;
-/** @deprecated Bundles packed before v1 renumbering; same layout as {@link V86B_VERSION}. */
-export const V86B_VERSION_LEGACY = 2;
 export const V86B_HEADER_SIZE = 64;
 export const V86B_DEFAULT_MEMORY = 512 * 1024 * 1024;
 export const V86B_MAX_DISK_BYTES = 2 * 1024 * 1024 * 1024;
@@ -29,16 +24,6 @@ export const V86B_MAX_BIOS_BYTES = 4 * 1024 * 1024;
  * }} V86BundleHeader
  */
 
-function assertBundleMagic(magic) {
-  if (magic !== V86B_MAGIC && magic !== V86B_LEGACY_SRG1_MAGIC) {
-    throw new Error("Not a V86 bundle (bad magic)");
-  }
-}
-
-function isSupportedBundleVersion(version) {
-  return version === V86B_VERSION || version === V86B_VERSION_LEGACY;
-}
-
 /**
  * @param {ArrayBuffer} buf Must be at least 64 bytes.
  * @returns {V86BundleHeader}
@@ -46,12 +31,14 @@ function isSupportedBundleVersion(version) {
 export function parseV86BundleHeader(buf) {
   const view = new DataView(buf);
   const magic = view.getUint32(0, true);
-  assertBundleMagic(magic);
+  if (magic !== V86B_MAGIC) {
+    throw new Error("Not a V86 bundle (bad magic)");
+  }
   const version = view.getUint16(4, true);
   const flags = view.getUint16(6, true);
   const memorySize = view.getUint32(8, true);
 
-  if (!isSupportedBundleVersion(version)) {
+  if (version !== V86B_VERSION) {
     throw new Error(`Unsupported V86 bundle version ${version}`);
   }
 
