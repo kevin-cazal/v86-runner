@@ -2,7 +2,7 @@ import { V86 } from "v86";
 import { assetUrl } from "../util/assetUrl.js";
 
 const DEFAULT_MEMORY =
-  (Number(import.meta.env.VITE_VM_MEMORY_MB) || 512) * 1024 * 1024;
+  (Number(import.meta.env.VITE_VM_MEMORY_MB) || 256) * 1024 * 1024;
 const textEncoder = new TextEncoder();
 
 export async function checkBiosAssets({ bundledBios = false } = {}) {

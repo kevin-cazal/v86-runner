@@ -3,7 +3,7 @@
 export const V86B_MAGIC = 0x42363856; // "V86B" little-endian
 export const V86B_VERSION = 1;
 export const V86B_HEADER_SIZE = 64;
-export const V86B_DEFAULT_MEMORY = 512 * 1024 * 1024;
+export const V86B_DEFAULT_MEMORY = 256 * 1024 * 1024;
 export const V86B_MAX_DISK_BYTES = 2 * 1024 * 1024 * 1024;
 export const V86B_MAX_BIOS_BYTES = 4 * 1024 * 1024;
 

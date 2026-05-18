@@ -14,4 +14,4 @@ VITE_VM_MEMORY_MB=256 npm run pack-bundle -- \
   -o shell-rpg-256M.v86b
 ```
 
-`pack-v86-bundle.mjs` defaults `--memory` from `VITE_VM_MEMORY_MB` (else 512 MiB).
+`pack-v86-bundle.mjs` defaults `--memory` from `VITE_VM_MEMORY_MB` (else 256 MiB).
