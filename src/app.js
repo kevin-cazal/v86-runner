@@ -1,4 +1,5 @@
 import { createMenuButton } from "./menu/index.js";
+import { getFileLoaderHook } from "./loaderHooks.js";
 import { createVmTerminal } from "./terminal/index.js";
 import { checkBiosAssets, createVmEmulator } from "./vm/index.js";
 import { attachHvc1Bridge, detachHvc1Bridge } from "./vmHVC1Bridge/index.js";
@@ -91,16 +92,21 @@ function sanitizeFilename(name) {
 }
 
 function readFileAsBuffer(file, onProgress) {
+  return readFileSlice(file, 0, file.size, onProgress);
+}
+
+function readFileSlice(file, start, length, onProgress) {
   return new Promise((resolve, reject) => {
+    const slice = file.slice(start, start + length);
     const reader = new FileReader();
     reader.onprogress = (ev) => {
       if (ev.lengthComputable && onProgress) {
         onProgress(Math.round((100 * ev.loaded) / ev.total));
       }
     };
-    reader.onload = () => resolve(reader.result);
+    reader.onload = () => resolve(/** @type {ArrayBuffer} */ (reader.result));
     reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(slice);
   });
 }
 
@@ -224,7 +230,15 @@ const menu = createMenuButton(menuRoot, {
   ],
 });
 
-async function bootWithBuffer(buffer, label) {
+/**
+ * @param {ArrayBuffer} buffer
+ * @param {string} label
+ * @param {{ initialStateBuffer?: ArrayBuffer, memorySize?: number }} [opts]
+ */
+async function bootWithBuffer(buffer, label, opts = {}) {
+  const { initialStateBuffer, memorySize } = opts;
+  const resuming = !!initialStateBuffer;
+
   diskBuffer = buffer;
   diskLabel = label;
   setPageTitleFromImage(label);
@@ -241,6 +255,8 @@ async function bootWithBuffer(buffer, label) {
   term = createVmTerminal(terminalHost);
   vm = createVmEmulator({
     diskBuffer,
+    initialStateBuffer,
+    memorySize,
     onDownloadProgress(info) {
       if (!info.lengthComputable) {
         setLoadMessage(`Loading ${info.file_name}…`);
@@ -258,12 +274,20 @@ async function bootWithBuffer(buffer, label) {
     syncGuestSize();
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
-    term.writeln("\r\n[emulator ready — boot may take several minutes in v86]\r\n");
+    term.writeln(
+      resuming
+        ? "\r\n[emulator ready — resumed from saved state]\r\n"
+        : "\r\n[emulator ready — boot may take several minutes in v86]\r\n",
+    );
   });
 
   showTerminalView();
   term.clear();
-  term.writeln(`\r\nBooting ${label} (${formatBytes(buffer.byteLength)})…\r\n`);
+  term.writeln(
+    resuming
+      ? `\r\nResuming ${label} (${formatBytes(buffer.byteLength)} disk)…\r\n`
+      : `\r\nBooting ${label} (${formatBytes(buffer.byteLength)})…\r\n`,
+  );
   syncGuestSize();
 
   setLoadMessage("Starting emulator…");
@@ -285,10 +309,26 @@ async function onDiskSelected(file) {
 
   try {
     showLoadScreen();
-    setLoadMessage(`Reading ${name} (${formatBytes(size)})…`);
     loadProgress.hidden = false;
     loadProgress.value = 0;
 
+    const hook = getFileLoaderHook();
+    if (hook) {
+      setLoadMessage(`Loading ${name}…`);
+      const custom = await hook(file, {
+        readSlice: (start, length, onProgress) =>
+          readFileSlice(file, start, length, onProgress),
+      });
+      if (custom) {
+        await bootWithBuffer(custom.diskBuffer, custom.label, {
+          initialStateBuffer: custom.initialStateBuffer,
+          memorySize: custom.memorySize,
+        });
+        return;
+      }
+    }
+
+    setLoadMessage(`Reading ${name} (${formatBytes(size)})…`);
     const buffer = await readFileAsBuffer(file, (pct) => {
       loadProgress.value = pct;
       setLoadMessage(`Reading ${name}: ${pct}%`);
@@ -313,5 +353,7 @@ stateInput.addEventListener("change", () => {
   stateInput.value = "";
   void onStateSelected(file);
 });
+
+export { setFileLoaderHook } from "./loaderHooks.js";
 
 showPickScreen();

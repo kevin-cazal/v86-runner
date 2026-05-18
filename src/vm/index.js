@@ -19,12 +19,14 @@ export async function checkBiosAssets() {
 /**
  * @param {{
  *   diskBuffer: ArrayBuffer,
+ *   initialStateBuffer?: ArrayBuffer,
  *   memorySize?: number,
  *   onDownloadProgress?: (info: { file_name: string, loaded: number, total: number, lengthComputable: boolean }) => void,
  * }} config
  */
 export function createVmEmulator({
   diskBuffer,
+  initialStateBuffer,
   memorySize = DEFAULT_MEMORY,
   onDownloadProgress,
 }) {
@@ -92,6 +94,9 @@ export function createVmEmulator({
         bios: { url: "/assets/seabios.bin" },
         vga_bios: { url: "/assets/vgabios.bin" },
         hda: { buffer: diskBuffer },
+        ...(initialStateBuffer
+          ? { initial_state: { buffer: initialStateBuffer } }
+          : {}),
         memory_size: memorySize,
         virtio_console: true,
         autostart: true,
