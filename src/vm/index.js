@@ -3,15 +3,20 @@ import { V86 } from "v86";
 const DEFAULT_MEMORY = 512 * 1024 * 1024;
 const textEncoder = new TextEncoder();
 
-export async function checkBiosAssets() {
-  const [bios, vga, wasm] = await Promise.all([
-    fetch("/assets/seabios.bin", { method: "HEAD" }),
-    fetch("/assets/vgabios.bin", { method: "HEAD" }),
-    fetch("/v86.wasm", { method: "HEAD" }),
-  ]);
-  if (!bios.ok || !vga.ok || !wasm.ok) {
+export async function checkBiosAssets({ bundledBios = false } = {}) {
+  const checks = [fetch("/v86.wasm", { method: "HEAD" })];
+  if (!bundledBios) {
+    checks.push(
+      fetch("/assets/seabios.bin", { method: "HEAD" }),
+      fetch("/assets/vgabios.bin", { method: "HEAD" }),
+    );
+  }
+  const results = await Promise.all(checks);
+  if (!results.every((r) => r.ok)) {
     throw new Error(
-      "Missing BIOS or wasm — stage public/v86.wasm and public/assets/*.bin (see README)",
+      bundledBios
+        ? "Missing v86.wasm — run npm install in v86-runner"
+        : "Missing BIOS or wasm — stage public/v86.wasm and public/assets/*.bin (see README)",
     );
   }
 }
@@ -20,6 +25,8 @@ export async function checkBiosAssets() {
  * @param {{
  *   diskBuffer: ArrayBuffer,
  *   initialStateBuffer?: ArrayBuffer,
+ *   biosBuffer?: ArrayBuffer,
+ *   vgaBiosBuffer?: ArrayBuffer,
  *   memorySize?: number,
  *   onDownloadProgress?: (info: { file_name: string, loaded: number, total: number, lengthComputable: boolean }) => void,
  * }} config
@@ -27,6 +34,8 @@ export async function checkBiosAssets() {
 export function createVmEmulator({
   diskBuffer,
   initialStateBuffer,
+  biosBuffer,
+  vgaBiosBuffer,
   memorySize = DEFAULT_MEMORY,
   onDownloadProgress,
 }) {
@@ -91,8 +100,12 @@ export function createVmEmulator({
 
       emulator = new V86({
         wasm_path: "/v86.wasm",
-        bios: { url: "/assets/seabios.bin" },
-        vga_bios: { url: "/assets/vgabios.bin" },
+        bios: biosBuffer
+          ? { buffer: biosBuffer }
+          : { url: "/assets/seabios.bin" },
+        vga_bios: vgaBiosBuffer
+          ? { buffer: vgaBiosBuffer }
+          : { url: "/assets/vgabios.bin" },
         hda: { buffer: diskBuffer },
         ...(initialStateBuffer
           ? { initial_state: { buffer: initialStateBuffer } }

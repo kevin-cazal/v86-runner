@@ -233,11 +233,12 @@ const menu = createMenuButton(menuRoot, {
 /**
  * @param {ArrayBuffer} buffer
  * @param {string} label
- * @param {{ initialStateBuffer?: ArrayBuffer, memorySize?: number }} [opts]
+ * @param {{ initialStateBuffer?: ArrayBuffer, memorySize?: number, biosBuffer?: ArrayBuffer, vgaBiosBuffer?: ArrayBuffer }} [opts]
  */
 async function bootWithBuffer(buffer, label, opts = {}) {
-  const { initialStateBuffer, memorySize } = opts;
+  const { initialStateBuffer, memorySize, biosBuffer, vgaBiosBuffer } = opts;
   const resuming = !!initialStateBuffer;
+  const bundledBios = !!(biosBuffer && vgaBiosBuffer);
 
   diskBuffer = buffer;
   diskLabel = label;
@@ -246,8 +247,8 @@ async function bootWithBuffer(buffer, label, opts = {}) {
   showLoadScreen();
   loadProgress.hidden = false;
   loadProgress.value = 0;
-  setLoadMessage("Checking BIOS…");
-  await checkBiosAssets();
+  setLoadMessage(bundledBios ? "Checking emulator…" : "Checking BIOS…");
+  await checkBiosAssets({ bundledBios });
 
   await destroyVm();
   disposeTerminal();
@@ -256,6 +257,8 @@ async function bootWithBuffer(buffer, label, opts = {}) {
   vm = createVmEmulator({
     diskBuffer,
     initialStateBuffer,
+    biosBuffer,
+    vgaBiosBuffer,
     memorySize,
     onDownloadProgress(info) {
       if (!info.lengthComputable) {
@@ -323,6 +326,8 @@ async function onDiskSelected(file) {
         await bootWithBuffer(custom.diskBuffer, custom.label, {
           initialStateBuffer: custom.initialStateBuffer,
           memorySize: custom.memorySize,
+          biosBuffer: custom.biosBuffer,
+          vgaBiosBuffer: custom.vgaBiosBuffer,
         });
         return;
       }

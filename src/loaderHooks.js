@@ -1,6 +1,6 @@
 /**
  * Optional product hook: load a custom single-file VM bundle before raw disk handling.
- * @typedef {{ diskBuffer: ArrayBuffer, label: string, initialStateBuffer?: ArrayBuffer, memorySize?: number }} FileLoadResult
+ * @typedef {{ diskBuffer: ArrayBuffer, label: string, initialStateBuffer?: ArrayBuffer, memorySize?: number, biosBuffer?: ArrayBuffer, vgaBiosBuffer?: ArrayBuffer }} FileLoadResult
  * @typedef {(file: File, helpers: { readSlice: (start: number, length: number, onProgress?: (pct: number) => void) => Promise<ArrayBuffer> }) => Promise<FileLoadResult | null>} FileLoaderHook
  */
 
