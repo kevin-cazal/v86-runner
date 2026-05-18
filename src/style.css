@@ -233,6 +233,18 @@ body {
   max-width: 28rem;
 }
 
+
+.pick-download-link {
+  color: #50e3c2;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pick-download-link:hover {
+  color: #7af0d8;
+}
+
 .pick-hint code {
   font-size: 0.85em;
   color: #50e3c2;
