@@ -1,5 +1,6 @@
+import { isV86BundleFile } from "./bundle/detect.js";
+import { loadV86Bundle } from "./bundle/load.js";
 import { createMenuButton } from "./menu/index.js";
-import { getFileLoaderHook } from "./loaderHooks.js";
 import { createVmTerminal } from "./terminal/index.js";
 import { checkBiosAssets, createVmEmulator } from "./vm/index.js";
 import { attachHvc1Bridge, detachHvc1Bridge } from "./vmHVC1Bridge/index.js";
@@ -315,22 +316,24 @@ async function onDiskSelected(file) {
     loadProgress.hidden = false;
     loadProgress.value = 0;
 
-    const hook = getFileLoaderHook();
-    if (hook) {
-      setLoadMessage(`Loading ${name}…`);
-      const custom = await hook(file, {
-        readSlice: (start, length, onProgress) =>
-          readFileSlice(file, start, length, onProgress),
+    const readSlice = (start, length, onProgress) =>
+      readFileSlice(file, start, length, onProgress);
+
+    if (await isV86BundleFile(file, (s, l) => readSlice(s, l))) {
+      const bundle = await loadV86Bundle(file, {
+        readSlice,
+        onProgress: ({ phase, percent }) => {
+          loadProgress.value = percent;
+          setLoadMessage(phase);
+        },
       });
-      if (custom) {
-        await bootWithBuffer(custom.diskBuffer, custom.label, {
-          initialStateBuffer: custom.initialStateBuffer,
-          memorySize: custom.memorySize,
-          biosBuffer: custom.biosBuffer,
-          vgaBiosBuffer: custom.vgaBiosBuffer,
-        });
-        return;
-      }
+      await bootWithBuffer(bundle.diskBuffer, bundle.label, {
+        initialStateBuffer: bundle.initialStateBuffer,
+        memorySize: bundle.memorySize,
+        biosBuffer: bundle.biosBuffer,
+        vgaBiosBuffer: bundle.vgaBiosBuffer,
+      });
+      return;
     }
 
     setLoadMessage(`Reading ${name} (${formatBytes(size)})…`);
@@ -358,7 +361,5 @@ stateInput.addEventListener("change", () => {
   stateInput.value = "";
   void onStateSelected(file);
 });
-
-export { setFileLoaderHook } from "./loaderHooks.js";
 
 showPickScreen();
