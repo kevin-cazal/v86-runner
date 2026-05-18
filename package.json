@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "pack-bundle": "node scripts/pack-v86-bundle.mjs"
+    "pack-bundle": "node scripts/pack-v86-bundle.mjs",
+    "build-state": "node scripts/build-v86-state.mjs",
+    "build-bundle": "node scripts/build-v86-bundle.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
