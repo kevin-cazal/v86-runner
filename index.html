@@ -21,14 +21,15 @@
     <div id="pick-overlay" class="load-overlay" aria-live="polite">
       <p class="pick-lead">Open your Alpine VM disk locally (no download).</p>
       <p class="pick-hint">
-        Raw BIOS disk image — usually <code>alpine-bios-*.img</code>
+        <code>.v86b</code> bundle (disk + saved state) or raw
+        <code>alpine-bios-*.img</code>
       </p>
       <label class="pick-btn">
         Choose disk image…
         <input
           id="disk-input"
           type="file"
-          accept=".img,.raw,application/octet-stream"
+          accept=".v86b,.img,.raw,application/octet-stream"
         />
       </label>
       <p id="pick-error" class="pick-error" hidden></p>
