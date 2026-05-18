@@ -278,6 +278,11 @@ async function bootWithBuffer(buffer, label, opts = {}) {
     syncGuestSize();
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
+    if (resuming) {
+      term.write("\x1b[?25l");
+      setTimeout(() => syncGuestSize(), 50);
+      setTimeout(() => syncGuestSize(), 1100);
+    }
     term.writeln(
       resuming
         ? "\r\n[emulator ready — resumed from saved state]\r\n"
@@ -286,7 +291,9 @@ async function bootWithBuffer(buffer, label, opts = {}) {
   });
 
   showTerminalView();
-  term.clear();
+  if (!resuming) {
+    term.clear();
+  }
   term.writeln(
     resuming
       ? `\r\nResuming ${label} (${formatBytes(buffer.byteLength)} disk)…\r\n`

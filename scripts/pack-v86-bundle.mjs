@@ -6,7 +6,7 @@
  *   node scripts/pack-v86-bundle.mjs --disk alpine.img --state game.v86state -o game.v86b
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -15,6 +15,7 @@ import {
   encodeV86BundleHeader,
   V86B_DEFAULT_MEMORY,
 } from "../src/bundle/format.js";
+import { resolveBiosPath } from "./lib/resolve-bios.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -47,25 +48,8 @@ if (!diskPath || !statePath || !outPath) {
   process.exit(1);
 }
 
-function resolveBiosPath(flag, name) {
-  if (flag) {
-    return flag;
-  }
-  const candidates = [
-    join(ROOT, "public/assets", name),
-    join(ROOT, "node_modules/v86/bios", name),
-  ];
-  for (const p of candidates) {
-    if (existsSync(p)) {
-      return p;
-    }
-  }
-  console.error(`Missing ${name}; run npm run prepare or pass --${name.replace(".bin", "")}`);
-  process.exit(1);
-}
-
-const seabiosPath = resolveBiosPath(values.seabios, "seabios.bin");
-const vgabiosPath = resolveBiosPath(values.vgabios, "vgabios.bin");
+const seabiosPath = resolveBiosPath(values.seabios, "seabios.bin", ROOT);
+const vgabiosPath = resolveBiosPath(values.vgabios, "vgabios.bin", ROOT);
 const seabios = readFileSync(seabiosPath);
 const vgabios = readFileSync(vgabiosPath);
 const disk = readFileSync(diskPath);
