@@ -55,6 +55,21 @@ export class Host9pServer {
     this.BuildReply(6, tag, size);
   }
 
+  /**
+   * Resolve an open fid; on failure sends ENOENT and returns null.
+   * @param {number} fid
+   * @param {number} tag
+   * @returns {{ inodeid: number, type: number, uid: number, dbg_name: string } | null}
+   */
+  getFidEntry(fid, tag) {
+    const entry = this.fids[fid];
+    if (!entry || entry.type === FID_NONE || entry.inodeid < 0) {
+      this.SendError(tag, ENOENT);
+      return null;
+    }
+    return entry;
+  }
+
   /** Copy so virtio can finish the reply before the next request reuses replybuffer. */
   copyReply() {
     return new Uint8Array(
@@ -125,8 +140,12 @@ export class Host9pServer {
       case 112: {
         req = Unmarshall(["w", "w"], buffer, state);
         fid = req[0];
-        logHost9pRequest(id, tag, { path: this.fids[fid]?.dbg_name });
-        idx = this.fids[fid].inodeid;
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          logHost9pRequest(id, tag, { path: entry.dbg_name });
+          idx = entry.inodeid;
+        }
         inode = this.fs.GetInode(idx);
         this.fs.OpenInode(idx);
         Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
@@ -141,8 +160,12 @@ export class Host9pServer {
         const mode = req[3];
         const gid = req[4];
         logHost9pRequest(id, tag, { path: name });
-        idx = this.fs.CreateFile(name, this.fids[fid].inodeid);
-        this.fids[fid] = this.Createfid(idx, FID_INODE, this.fids[fid].uid, name);
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          idx = this.fs.CreateFile(name, entry.inodeid);
+          this.fids[fid] = this.Createfid(idx, FID_INODE, entry.uid, name);
+        }
         inode = this.fs.GetInode(idx);
         inode.gid = gid;
         inode.mode = mode | 0x8000;
@@ -154,20 +177,23 @@ export class Host9pServer {
       case 24: {
         req = Unmarshall(["w", "d"], buffer, state);
         fid = req[0];
-        inode = this.fs.GetInode(this.fids[fid].inodeid);
-        if (!inode) {
-          logHost9pError(id, tag, "ENOENT");
-          this.SendError(tag, ENOENT);
-          break;
-        }
-        const responseValid = Number(req[1]) | P9_STATS_SIZE;
-        logHost9pRequest(id, tag, {
-          path: this.fids[fid]?.dbg_name,
-          valid: responseValid,
-          size: inode.size,
-        });
-        // Must match copy/v86 lib/9p.js Tgetattr field order exactly (20 fields).
-        const attr = [
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          inode = this.fs.GetInode(entry.inodeid);
+          if (!inode) {
+            logHost9pError(id, tag, "ENOENT");
+            this.SendError(tag, ENOENT);
+            break;
+          }
+          const responseValid = Number(req[1]) | P9_STATS_SIZE;
+          logHost9pRequest(id, tag, {
+            path: entry.dbg_name,
+            valid: responseValid,
+            size: inode.size,
+          });
+          // Must match copy/v86 lib/9p.js Tgetattr field order exactly (20 fields).
+          const attr = [
           responseValid,
           inode.qid,
           inode.mode,
@@ -216,43 +242,53 @@ export class Host9pServer {
           this.replybuffer,
           7,
         );
-        this.BuildReply(id, tag, 153);
+          this.BuildReply(id, tag, 153);
+        }
         break;
       }
 
       case 26: {
         req = Unmarshall("wwwwwddddd".split(""), buffer, state);
         fid = req[0];
-        inode = this.fs.GetInode(this.fids[fid].inodeid);
-        logHost9pRequest(id, tag, { path: this.fids[fid]?.dbg_name });
-        if (req[1] & P9_SETATTR_MODE) {
-          inode.mode = req[2];
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          inode = this.fs.GetInode(entry.inodeid);
+          if (!inode) {
+            logHost9pError(id, tag, "ENOENT");
+            this.SendError(tag, ENOENT);
+            break;
+          }
+          logHost9pRequest(id, tag, { path: entry.dbg_name });
+          if (req[1] & P9_SETATTR_MODE) {
+            inode.mode = req[2];
+          }
+          if (req[1] & P9_SETATTR_UID) {
+            inode.uid = req[3];
+          }
+          if (req[1] & P9_SETATTR_GID) {
+            inode.gid = req[4];
+          }
+          if (req[1] & P9_SETATTR_ATIME) {
+            inode.atime = Math.floor(Date.now() / 1000);
+          }
+          if (req[1] & P9_SETATTR_MTIME) {
+            inode.mtime = Math.floor(Date.now() / 1000);
+          }
+          if (req[1] & P9_SETATTR_CTIME) {
+            inode.ctime = Math.floor(Date.now() / 1000);
+          }
+          if (req[1] & P9_SETATTR_ATIME_SET) {
+            inode.atime = req[6];
+          }
+          if (req[1] & P9_SETATTR_MTIME_SET) {
+            inode.mtime = req[8];
+          }
+          if (req[1] & P9_SETATTR_SIZE) {
+            this.fs.ChangeSize(entry.inodeid, req[5]);
+          }
+          this.BuildReply(id, tag, 0);
         }
-        if (req[1] & P9_SETATTR_UID) {
-          inode.uid = req[3];
-        }
-        if (req[1] & P9_SETATTR_GID) {
-          inode.gid = req[4];
-        }
-        if (req[1] & P9_SETATTR_ATIME) {
-          inode.atime = Math.floor(Date.now() / 1000);
-        }
-        if (req[1] & P9_SETATTR_MTIME) {
-          inode.mtime = Math.floor(Date.now() / 1000);
-        }
-        if (req[1] & P9_SETATTR_CTIME) {
-          inode.ctime = Math.floor(Date.now() / 1000);
-        }
-        if (req[1] & P9_SETATTR_ATIME_SET) {
-          inode.atime = req[6];
-        }
-        if (req[1] & P9_SETATTR_MTIME_SET) {
-          inode.mtime = req[8];
-        }
-        if (req[1] & P9_SETATTR_SIZE) {
-          this.fs.ChangeSize(this.fids[fid].inodeid, req[5]);
-        }
-        this.BuildReply(id, tag, 0);
         break;
       }
 
@@ -262,36 +298,40 @@ export class Host9pServer {
         fid = req[0];
         offset = req[1];
         count = req[2];
-        idx = this.fids[fid].inodeid;
-        inode = this.fs.GetInode(idx);
-        if (!inode) {
-          logHost9pError(id, tag, "ENOENT");
-          this.SendError(tag, ENOENT);
-          break;
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          idx = entry.inodeid;
+          inode = this.fs.GetInode(idx);
+          if (!inode) {
+            logHost9pError(id, tag, "ENOENT");
+            this.SendError(tag, ENOENT);
+            break;
+          }
+          this.fs.OpenInode(idx);
+          count = Math.min(count, this.replybuffer.length - 11);
+          if (offset >= inode.size) {
+            count = 0;
+          } else if (inode.size < offset + count) {
+            count = inode.size - offset;
+          }
+          if (id === 40 && this.fs.IsDirectory(idx)) {
+            count = this.fs.RoundToDirentry(idx, offset + count) - offset;
+            count = Math.max(0, count);
+          }
+          data = this.fs.Read(idx, offset, count);
+          if (count > 0 && data?.length) {
+            this.replybuffer.set(data.subarray(0, count), 11);
+          }
+          logHost9pRequest(id, tag, {
+            path: entry.dbg_name,
+            offset,
+            count,
+            size: inode.size,
+          });
+          Marshall(["w"], [count], this.replybuffer, 7);
+          this.BuildReply(id, tag, 4 + count);
         }
-        this.fs.OpenInode(idx);
-        count = Math.min(count, this.replybuffer.length - 11);
-        if (offset >= inode.size) {
-          count = 0;
-        } else if (inode.size < offset + count) {
-          count = inode.size - offset;
-        }
-        if (id === 40 && this.fs.IsDirectory(idx)) {
-          count = this.fs.RoundToDirentry(idx, offset + count) - offset;
-          count = Math.max(0, count);
-        }
-        data = this.fs.Read(idx, offset, count);
-        if (count > 0 && data?.length) {
-          this.replybuffer.set(data.subarray(0, count), 11);
-        }
-        logHost9pRequest(id, tag, {
-          path: this.fids[fid]?.dbg_name,
-          offset,
-          count,
-          size: inode.size,
-        });
-        Marshall(["w"], [count], this.replybuffer, 7);
-        this.BuildReply(id, tag, 4 + count);
         break;
       }
 
@@ -300,15 +340,19 @@ export class Host9pServer {
         fid = req[0];
         offset = req[1];
         count = req[2];
-        logHost9pRequest(id, tag, { path: this.fids[fid]?.dbg_name });
-        this.fs.Write(
-          this.fids[fid].inodeid,
-          offset,
-          count,
-          buffer.subarray(state.offset),
-        );
-        Marshall(["w"], [count], this.replybuffer, 7);
-        this.BuildReply(id, tag, 4);
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          logHost9pRequest(id, tag, { path: entry.dbg_name });
+          this.fs.Write(
+            entry.inodeid,
+            offset,
+            count,
+            buffer.subarray(state.offset),
+          );
+          Marshall(["w"], [count], this.replybuffer, 7);
+          this.BuildReply(id, tag, 4);
+        }
         break;
       }
 
@@ -319,18 +363,22 @@ export class Host9pServer {
         const mode = req[2];
         const gid = req[4];
         logHost9pRequest(id, tag, { path: dirName });
-        const parentid = this.fids[fid].inodeid;
-        if (this.fs.Search(parentid, dirName) !== -1) {
-          logHost9pError(id, tag, "EEXIST");
-          this.SendError(tag, EEXIST);
-          break;
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          const parentid = entry.inodeid;
+          if (this.fs.Search(parentid, dirName) !== -1) {
+            logHost9pError(id, tag, "EEXIST");
+            this.SendError(tag, EEXIST);
+            break;
+          }
+          idx = this.fs.CreateDirectory(dirName, parentid);
+          inode = this.fs.GetInode(idx);
+          inode.mode = mode | 0x4000;
+          inode.gid = gid;
+          Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+          this.BuildReply(id, tag, 13);
         }
-        idx = this.fs.CreateDirectory(dirName, parentid);
-        inode = this.fs.GetInode(idx);
-        inode.mode = mode | 0x4000;
-        inode.gid = gid;
-        Marshall(["Q"], [inode.qid], this.replybuffer, 7);
-        this.BuildReply(id, tag, 13);
         break;
       }
 
@@ -339,19 +387,17 @@ export class Host9pServer {
         fid = req[0];
         const unlinkName = req[1];
         logHost9pRequest(id, tag, { path: unlinkName });
-        const parentInode = this.fids[fid]?.inodeid;
-        if (parentInode === undefined || parentInode < 0) {
-          logHost9pError(id, tag, "ENOENT");
-          this.SendError(tag, ENOENT);
-          break;
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          const rc = this.fs.Unlink(entry.inodeid, unlinkName);
+          if (rc !== 0) {
+            logHost9pError(id, tag, `unlink ${rc}`);
+            this.SendError(tag, -rc);
+            break;
+          }
+          this.BuildReply(id, tag, 0);
         }
-        const rc = this.fs.Unlink(parentInode, unlinkName);
-        if (rc !== 0) {
-          logHost9pError(id, tag, `unlink ${rc}`);
-          this.SendError(tag, -rc);
-          break;
-        }
-        this.BuildReply(id, tag, 0);
         break;
       }
 
@@ -393,42 +439,53 @@ export class Host9pServer {
         const nwfid = req[1];
         const nwname = req[2];
         if (nwname === 0) {
-          logHost9pRequest(id, tag, { path: this.fids[fid]?.dbg_name });
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          logHost9pRequest(id, tag, { path: entry.dbg_name });
           this.fids[nwfid] = this.Createfid(
-            this.fids[fid].inodeid,
+            entry.inodeid,
             FID_INODE,
-            this.fids[fid].uid,
-            this.fids[fid].dbg_name,
+            entry.uid,
+            entry.dbg_name,
           );
           Marshall(["h"], [0], this.replybuffer, 7);
           this.BuildReply(id, tag, 2);
           break;
         }
-        const wnames = [];
-        for (let i = 0; i < nwname; i++) {
-          wnames.push("s");
-        }
-        const walk = Unmarshall(wnames, buffer, state);
-        logHost9pRequest(id, tag, { path: walk.join("/") });
-        idx = this.fids[fid].inodeid;
-        let replyOffset = 7 + 2;
-        let nwidx = 0;
-        for (let i = 0; i < nwname; i++) {
-          idx = this.fs.Search(idx, walk[i]);
-          if (idx === -1) {
+        {
+          const entry = this.getFidEntry(fid, tag);
+          if (!entry) break;
+          const wnames = [];
+          for (let i = 0; i < nwname; i++) {
+            wnames.push("s");
+          }
+          const walk = Unmarshall(wnames, buffer, state);
+          logHost9pRequest(id, tag, { path: walk.join("/") });
+          idx = entry.inodeid;
+          let replyOffset = 7 + 2;
+          let nwidx = 0;
+          for (let i = 0; i < nwname; i++) {
+            idx = this.fs.Search(idx, walk[i]);
+            if (idx === -1) {
+              break;
+            }
+            replyOffset += Marshall(
+              ["Q"],
+              [this.fs.GetInode(idx).qid],
+              this.replybuffer,
+              replyOffset,
+            );
+            nwidx++;
+            this.fids[nwfid] = this.Createfid(idx, FID_INODE, entry.uid, walk[i]);
+          }
+          if (nwidx === 0) {
+            logHost9pError(id, tag, "ENOENT");
+            this.SendError(tag, ENOENT);
             break;
           }
-          replyOffset += Marshall(
-            ["Q"],
-            [this.fs.GetInode(idx).qid],
-            this.replybuffer,
-            replyOffset,
-          );
-          nwidx++;
-          this.fids[nwfid] = this.Createfid(idx, FID_INODE, this.fids[fid].uid, walk[i]);
+          Marshall(["h"], [nwidx], this.replybuffer, 7);
+          this.BuildReply(id, tag, replyOffset - 7);
         }
-        Marshall(["h"], [nwidx], this.replybuffer, 7);
-        this.BuildReply(id, tag, replyOffset - 7);
         break;
       }
 
