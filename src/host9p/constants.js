@@ -1,6 +1,11 @@
 /** 9p2000.L constants (from copy/v86 lib/9p.js). */
 
 export const ENOENT = 2;
+export const EEXIST = 17;
+export const ENOTDIR = 20;
+export const EISDIR = 21;
+export const EINVAL = 22;
+export const ENOTEMPTY = 39;
 export const EOPNOTSUPP = 95;
 
 export const S_IFREG = 0x8000;

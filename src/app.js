@@ -136,6 +136,7 @@ function syncWindowDebug() {
   window.host9p = h9
     ? {
         vfs: h9.vfs,
+        Host9pError: h9.Host9pError,
         stats: () => h9.getStats(),
         reset: () => h9.vfs.reset(),
         resetStats: () => h9.resetStats(),

@@ -4,7 +4,10 @@
 
 import { Marshall, Unmarshall } from "./marshall.js";
 import {
+  EEXIST,
   ENOENT,
+  ENOTEMPTY,
+  EINVAL,
   EOPNOTSUPP,
   FID_INODE,
   FID_NONE,
@@ -316,7 +319,13 @@ export class Host9pServer {
         const mode = req[2];
         const gid = req[4];
         logHost9pRequest(id, tag, { path: dirName });
-        idx = this.fs.CreateDirectory(dirName, this.fids[fid].inodeid);
+        const parentid = this.fids[fid].inodeid;
+        if (this.fs.Search(parentid, dirName) !== -1) {
+          logHost9pError(id, tag, "EEXIST");
+          this.SendError(tag, EEXIST);
+          break;
+        }
+        idx = this.fs.CreateDirectory(dirName, parentid);
         inode = this.fs.GetInode(idx);
         inode.mode = mode | 0x4000;
         inode.gid = gid;
@@ -327,7 +336,21 @@ export class Host9pServer {
 
       case 76: {
         req = Unmarshall(["w", "s", "w"], buffer, state);
-        logHost9pRequest(id, tag, { path: req[1] });
+        fid = req[0];
+        const unlinkName = req[1];
+        logHost9pRequest(id, tag, { path: unlinkName });
+        const parentInode = this.fids[fid]?.inodeid;
+        if (parentInode === undefined || parentInode < 0) {
+          logHost9pError(id, tag, "ENOENT");
+          this.SendError(tag, ENOENT);
+          break;
+        }
+        const rc = this.fs.Unlink(parentInode, unlinkName);
+        if (rc !== 0) {
+          logHost9pError(id, tag, `unlink ${rc}`);
+          this.SendError(tag, -rc);
+          break;
+        }
         this.BuildReply(id, tag, 0);
         break;
       }
