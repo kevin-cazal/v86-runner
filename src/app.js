@@ -130,8 +130,24 @@ function wireConsole(terminal, emulator) {
   });
 }
 
-function syncWindowEmulator() {
+function syncWindowDebug() {
   window.emulator = vm?.emulator ?? null;
+  const h9 = vm?.host9p;
+  window.host9p = h9
+    ? {
+        vfs: h9.vfs,
+        stats: () => h9.getStats(),
+        reset: () => h9.vfs.reset(),
+        resetStats: () => h9.resetStats(),
+        enableDebug: () => {
+          localStorage.setItem("host9pDebug", "1");
+          console.log(
+            "[host9p] debug on — reload page, then cat in guest; logs use console.log",
+          );
+        },
+        disableDebug: () => localStorage.removeItem("host9pDebug"),
+      }
+    : null;
 }
 
 async function destroyVm() {
@@ -141,7 +157,7 @@ async function destroyVm() {
     await vm.destroy();
     vm = null;
   }
-  syncWindowEmulator();
+  syncWindowDebug();
 }
 
 function resetVm() {
@@ -310,7 +326,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
   const readyPromise = vm.start();
   attachHvc1Bridge(vm.emulator);
   await readyPromise;
-  syncWindowEmulator();
+  syncWindowDebug();
 }
 
 async function onDiskSelected(file) {

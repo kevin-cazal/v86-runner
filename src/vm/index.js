@@ -1,4 +1,5 @@
 import { V86 } from "v86";
+import { createHost9p } from "../host9p/index.js";
 import { assetUrl } from "../util/assetUrl.js";
 
 const DEFAULT_MEMORY =
@@ -31,6 +32,7 @@ export async function checkBiosAssets({ bundledBios = false } = {}) {
  *   vgaBiosBuffer?: ArrayBuffer,
  *   memorySize?: number,
  *   onDownloadProgress?: (info: { file_name: string, loaded: number, total: number, lengthComputable: boolean }) => void,
+ *   enableHost9p?: boolean,
  * }} config
  */
 export function createVmEmulator({
@@ -40,7 +42,9 @@ export function createVmEmulator({
   vgaBiosBuffer,
   memorySize = DEFAULT_MEMORY,
   onDownloadProgress,
+  enableHost9p = true,
 }) {
+  const host9p = enableHost9p ? createHost9p() : null;
   /** @type {import("v86").V86 | null} */
   let emulator = null;
 
@@ -64,6 +68,8 @@ export function createVmEmulator({
   };
 
   return {
+    host9p,
+
     get emulator() {
       return emulator;
     },
@@ -115,6 +121,9 @@ export function createVmEmulator({
         memory_size: memorySize,
         virtio_console: true,
         autostart: true,
+        ...(host9p
+          ? { filesystem: { handle9p: host9p.handle9p } }
+          : {}),
       });
 
       emulator.add_listener("virtio-console0-output-bytes", onConsoleOutput);
