@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { V86 } from "v86";
+import { createHost9p } from "../src/host9p/index.js";
 import { V86B_DEFAULT_MEMORY } from "../src/bundle/format.js";
 import {
   attachHvc1Bridge,
@@ -126,6 +127,8 @@ async function saveAndExit() {
   }
 }
 
+const host9p = createHost9p();
+
 emulator = new V86({
   wasm_path: wasmPath,
   bios: { buffer: seabios.buffer },
@@ -135,6 +138,7 @@ emulator = new V86({
   virtio_console: true,
   autostart: true,
   disable_keyboard: true,
+  filesystem: { handle9p: host9p.handle9p },
 });
 
 attachHvc1Bridge(emulator);
