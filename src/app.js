@@ -3,6 +3,7 @@ import { loadV86Bundle } from "./bundle/load.js";
 import { createMenuButton } from "./menu/index.js";
 import { createVmTerminal } from "./terminal/index.js";
 import { checkBiosAssets, createVmEmulator } from "./vm/index.js";
+import { setHost9pVfs } from "./host9p/access.js";
 import { attachHvc1Bridge, detachHvc1Bridge } from "./vmHVC1Bridge/index.js";
 import { resetPageTitle, setPageTitleFromImage } from "./util/pageTitle.js";
 
@@ -133,6 +134,7 @@ function wireConsole(terminal, emulator) {
 function syncWindowDebug() {
   window.emulator = vm?.emulator ?? null;
   const h9 = vm?.host9p;
+  setHost9pVfs(h9?.vfs ?? null);
   window.host9p = h9
     ? {
         vfs: h9.vfs,
