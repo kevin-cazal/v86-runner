@@ -130,6 +130,10 @@ function wireConsole(terminal, emulator) {
   });
 }
 
+function syncWindowEmulator() {
+  window.emulator = vm?.emulator ?? null;
+}
+
 async function destroyVm() {
   term?.stopResizeRetry();
   detachHvc1Bridge();
@@ -137,6 +141,7 @@ async function destroyVm() {
     await vm.destroy();
     vm = null;
   }
+  syncWindowEmulator();
 }
 
 function resetVm() {
@@ -305,6 +310,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
   const readyPromise = vm.start();
   attachHvc1Bridge(vm.emulator);
   await readyPromise;
+  syncWindowEmulator();
 }
 
 async function onDiskSelected(file) {
