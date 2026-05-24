@@ -69,11 +69,24 @@ function syncGuestSize() {
   }
 }
 
-/** Clear host xterm and guest hvc0 (virtio-console0) after state restore. */
-function clearHvc0Console() {
+/** Inject hvc0 restore: clear input line, cd . (zone bg hook), clear screen. */
+function injectHvc0RestoreSequence() {
+  vm?.sendConsoleInput("\x15cd .\n\x1b[2J\x1b[H");
+}
+
+/** Clear host xterm and reset guest hvc0 after state restore. */
+function restoreHvc0AfterStateLoad() {
   term?.clear();
-  vm?.sendConsoleInput("\x1b[2J\x1b[H");
+  injectHvc0RestoreSequence();
   term?.showCursor();
+}
+
+/** Retries: guest shell may not accept input immediately after restore. */
+function scheduleHvc0RestoreAfterStateLoad() {
+  restoreHvc0AfterStateLoad();
+  for (const ms of [500, 1500]) {
+    setTimeout(() => injectHvc0RestoreSequence(), ms);
+  }
 }
 
 function showTerminalView() {
@@ -212,7 +225,7 @@ async function onStateSelected(file) {
     setStatus("Loading memory…");
     const buffer = await readFileAsBuffer(file);
     await vm.restoreState(buffer);
-    clearHvc0Console();
+    scheduleHvc0RestoreAfterStateLoad();
     syncGuestSize();
     setStatus(`Running — ${diskLabel}`);
     term?.focus();
@@ -319,7 +332,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
     if (resuming) {
-      clearHvc0Console();
+      scheduleHvc0RestoreAfterStateLoad();
       setTimeout(() => syncGuestSize(), 50);
       setTimeout(() => syncGuestSize(), 1100);
     }
