@@ -16,11 +16,12 @@ import { Host9pVfs } from "./vfs.js";
  */
 
 /**
- * Host-facing VFS API for a future menu file browser:
+ * Host-facing VFS API for the menu file browser:
  * - upload / overwrite: {@link Host9pVfsApi.put}
  * - download: {@link Host9pVfsApi.get}
  * - delete file: {@link Host9pVfsApi.remove}
  * - delete empty directory: {@link Host9pVfsApi.rmdir}
+ * - rename / move: {@link Host9pVfsApi.rename}
  * - new folder: {@link Host9pVfsApi.mkdir}
  * - list with metadata: {@link Host9pVfsApi.listEntries}
  *
@@ -45,6 +46,7 @@ function createHost9pVfsApi(vfs) {
     mkdir: (path) => vfs.mkdir(path),
     remove: (path) => vfs.remove(path),
     rmdir: (path) => vfs.rmdir(path),
+    rename: (oldPath, newPath) => vfs.rename(oldPath, newPath),
     reset: () => vfs.reset(),
   };
 }
