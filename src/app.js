@@ -206,8 +206,10 @@ async function onStateSelected(file) {
     const buffer = await readFileAsBuffer(file);
     await vm.restoreState(buffer);
     syncGuestSize();
+    term?.showCursor();
     setStatus(`Running — ${diskLabel}`);
     term?.focus();
+    window.dispatchEvent(new CustomEvent("vm-state-restored"));
   } catch (err) {
     setStatus(err instanceof Error ? err.message : String(err));
     console.error(err);
@@ -310,7 +312,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
     if (resuming) {
-      term.write("\x1b[?25l");
+      term.showCursor();
       setTimeout(() => syncGuestSize(), 50);
       setTimeout(() => syncGuestSize(), 1100);
     }
