@@ -539,3 +539,208 @@ body.plugin-popup-open {
   color: #9a9a9a;
   line-height: 1.45;
 }
+
+.plugin-popup:has(.host9p-browser) .plugin-popup-dialog {
+  width: min(42rem, 100%);
+}
+
+.host9p-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.host9p-browser-path-hint {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  color: #7a9e96;
+  word-break: break-all;
+}
+
+.host9p-browser-status {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #ffb4a8;
+  background: rgba(255, 100, 80, 0.12);
+  border: 1px solid rgba(255, 100, 80, 0.35);
+}
+
+.host9p-browser-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.host9p-browser-btn {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #3d5a52;
+  border-radius: 4px;
+  background: #1a2422;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.host9p-browser-btn:hover:not(:disabled) {
+  border-color: #50e3c2;
+  color: #50e3c2;
+}
+
+.host9p-browser-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.host9p-browser-btn-small {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.host9p-browser-btn-danger:hover:not(:disabled) {
+  border-color: #ff8a7a;
+  color: #ff8a7a;
+}
+
+.host9p-browser-list-wrap {
+  max-height: min(50vh, 24rem);
+  overflow: auto;
+  border: 1px solid #2a3d38;
+  border-radius: 6px;
+}
+
+.host9p-browser-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.host9p-browser-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  font-weight: 600;
+  color: #9a9a9a;
+  background: #151515;
+  border-bottom: 1px solid #2a3d38;
+}
+
+.host9p-browser-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #1e2e2a;
+  vertical-align: middle;
+}
+
+.host9p-browser-table tr:last-child td {
+  border-bottom: none;
+}
+
+.host9p-browser-row-dir:hover {
+  background: rgba(80, 227, 194, 0.04);
+}
+
+.host9p-browser-empty {
+  text-align: center;
+  color: #7a9e96;
+  font-style: italic;
+}
+
+.host9p-browser-name-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #50e3c2;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.host9p-browser-row-file .host9p-browser-name-btn {
+  color: #e0e0e0;
+  cursor: default;
+}
+
+.host9p-browser-row-dir .host9p-browser-name-btn:hover {
+  text-decoration: underline;
+}
+
+.host9p-browser-size-cell,
+.host9p-browser-mtime-cell {
+  color: #9a9a9a;
+  white-space: nowrap;
+}
+
+.host9p-browser-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.host9p-browser-rename-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.host9p-browser-rename-input {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid #3d5a52;
+  border-radius: 4px;
+  background: #0f1614;
+  color: #e0e0e0;
+  font: inherit;
+}
+
+.host9p-browser-rename-input:focus {
+  outline: none;
+  border-color: #50e3c2;
+}
+
+.host9p-browser-mkdir-panel {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #2a3d38;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.host9p-browser-mkdir-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.host9p-browser-mkdir-label {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #9a9a9a;
+}
+
+.host9p-browser-mkdir-label input {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.host9p-browser-remove-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.host9p-browser-remove-msg {
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+  color: #ffb4a8;
+}
+

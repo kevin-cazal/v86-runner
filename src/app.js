@@ -1,6 +1,7 @@
 import { isV86BundleFile } from "./bundle/detect.js";
 import { loadV86Bundle } from "./bundle/load.js";
 import { createMenuButton } from "./menu/index.js";
+import { openHost9pFileBrowser } from "./host9pFileBrowser/index.js";
 import { createVmTerminal } from "./terminal/index.js";
 import { checkBiosAssets, createVmEmulator } from "./vm/index.js";
 import { attachHvc1Bridge, detachHvc1Bridge } from "./vmHVC1Bridge/index.js";
@@ -249,6 +250,12 @@ const menu = createMenuButton(menuRoot, {
       onClick: () => {
         void changeImage();
       },
+    },
+    {
+      type: "action",
+      label: "Host files…",
+      disabled: () => !vm?.host9p?.vfs,
+      onClick: () => openHost9pFileBrowser(() => vm?.host9p?.vfs ?? null),
     },
   ],
 });

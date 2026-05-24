@@ -29,3 +29,12 @@ Built assets use a **relative base** (`./`) so the whole `dist/` folder can be s
 ## Plugin API
 
 Import `./app.js` from a custom entry, or call `registerPluginMenu` from `src/menu/` (see source).
+
+## Host file share (menu browser)
+
+When the VM is running with virtio-9p enabled, open **Menu → Host files…** to browse the in-memory host VFS.
+
+- **Host paths** use the 9p root (e.g. `/save.dat`).
+- The guest sees the same files under **`/mnt/host`** (e.g. `/mnt/host/save.dat`).
+
+Supported operations: list, upload, download, rename, remove files, create/remove empty folders. Host VFS state is not saved in v86 memory snapshots; re-upload files after loading an old state if needed.

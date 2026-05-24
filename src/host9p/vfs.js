@@ -400,6 +400,64 @@ export class Host9pVfs {
     }
   }
 
+  rename(oldPath, newPath) {
+    const oldNorm = normalizePath(oldPath);
+    const newNorm = normalizePath(newPath);
+    if (oldNorm === newNorm) {
+      return newNorm;
+    }
+
+    const src = resolveParentName(this, oldNorm);
+    const srcId = this.Search(src.parent, src.name);
+    if (srcId === -1) {
+      throwHost9p("ENOENT", `No such path: ${oldNorm}`);
+    }
+
+    const dst = resolveParentName(this, newNorm);
+    if (dst.name === "." || dst.name === "..") {
+      throwHost9p("EINVAL", `Invalid name: ${dst.name}`);
+    }
+    if (this.Search(dst.parent, dst.name) !== -1) {
+      throwHost9p("EEXIST", `Path already exists: ${newNorm}`);
+    }
+
+    if (this.IsDirectory(srcId) && isDescendantDir(this, srcId, dst.parent)) {
+      throwHost9p("EINVAL", `Cannot move directory into itself: ${oldNorm}`);
+    }
+
+    this.detachDirent(src.parent, src.name, srcId);
+    this.attachDirent(dst.parent, dst.name, srcId);
+    return newNorm;
+  }
+
+  /**
+   * Remove a dirent without deleting inode data (for rename/move).
+   */
+  detachDirent(parentid, name, childid) {
+    const child = this.inodes[childid];
+    const parent = this.inodes[parentid];
+    if (!parent.direntries.delete(name)) {
+      return;
+    }
+    child.nlinks--;
+    if (this.IsDirectory(childid)) {
+      parent.nlinks--;
+    }
+    parent.qid.version = (parent.qid.version + 1) & 0xffff;
+  }
+
+  attachDirent(parentid, name, childid) {
+    const child = this.inodes[childid];
+    const parent = this.inodes[parentid];
+    parent.direntries.set(name, childid);
+    child.nlinks++;
+    if (this.IsDirectory(childid)) {
+      parent.nlinks++;
+      child.direntries.set("..", parentid);
+    }
+    parent.qid.version = (parent.qid.version + 1) & 0xffff;
+  }
+
   resolvePath(path) {
     const parts = normalizePath(path).split("/").filter(Boolean);
     let idx = 0;
@@ -416,6 +474,30 @@ export class Host9pVfs {
 function normalizePath(path) {
   const p = path.startsWith("/") ? path : `/${path}`;
   return p.replace(/\/+/g, "/");
+}
+
+/**
+ * @param {Host9pVfs} vfs
+ * @param {number} ancestorId
+ * @param {number} nodeId
+ */
+function isDescendantDir(vfs, ancestorId, nodeId) {
+  if (nodeId === ancestorId) {
+    return true;
+  }
+  let current = nodeId;
+  while (current > 0) {
+    const inode = vfs.GetInode(current);
+    const parentId = inode.direntries.get("..");
+    if (parentId === undefined) {
+      break;
+    }
+    if (parentId === ancestorId) {
+      return true;
+    }
+    current = parentId;
+  }
+  return false;
 }
 
 /**
