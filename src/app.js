@@ -317,6 +317,9 @@ async function bootWithBuffer(buffer, label, opts = {}) {
         ? "\r\n[emulator ready — resumed from saved state]\r\n"
         : "\r\n[emulator ready — boot may take several minutes in v86]\r\n",
     );
+    window.dispatchEvent(
+      new CustomEvent("vm-guest-ready", { detail: { resuming } }),
+    );
   });
 
   showTerminalView();
