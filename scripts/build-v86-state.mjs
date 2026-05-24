@@ -157,7 +157,7 @@ unsubLine = onHvc1Line((line) => {
     phase = "quiesce";
     console.error("\n[splash-ready] Quiescing guest via serial0…");
     emulator.serial0_send(
-      "sync; echo 3 >/proc/sys/vm/drop_caches; /usr/local/bin/vm-bridge-send state-ready\n",
+      "umount /mnt/host 2>/dev/null; sync; echo 3 >/proc/sys/vm/drop_caches; /usr/local/bin/vm-bridge-send state-ready\n",
     );
   } else if (phase === "quiesce" && line === "state-ready") {
     phase = "save";
