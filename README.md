@@ -37,4 +37,4 @@ When the VM is running with virtio-9p enabled, open **Menu → Host files…** t
 - **Host paths** use the 9p root (e.g. `/save.dat`).
 - The guest sees the same files under **`/mnt/host`** (e.g. `/mnt/host/save.dat`).
 
-Supported operations: list, upload, download, rename, remove files, create/remove empty folders. Host VFS state is not saved in v86 memory snapshots; re-upload files after loading an old state if needed.
+Supported operations: list, upload, download, rename, remove files, create/remove empty folders, and **Download .tar.gz…** (exports the **current folder** as a gzip-compressed tar archive with Unix `mode` and `mtime` per entry; extract with `tar xzf` on Linux/macOS). Host VFS state is not saved in v86 memory snapshots; re-upload files after loading an old state if needed.

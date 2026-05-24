@@ -1,6 +1,10 @@
 /**
  * Modal file browser for the in-memory host9p VFS (Menu → Host files…).
  */
+import {
+  defaultTarGzFilename,
+  exportHost9pTarGz,
+} from "../host9p/exportTarGz.js";
 import { Host9pError } from "../host9p/errors.js";
 import { showPopup } from "../popup/index.js";
 
@@ -150,12 +154,17 @@ function renderHost9pBrowser(container, getVfs) {
   mkdirBtn.className = "host9p-browser-btn";
   mkdirBtn.textContent = "New directory…";
 
+  const downloadTarBtn = document.createElement("button");
+  downloadTarBtn.type = "button";
+  downloadTarBtn.className = "host9p-browser-btn";
+  downloadTarBtn.textContent = "Download .tar.gz…";
+
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.multiple = true;
   fileInput.hidden = true;
 
-  toolbar.append(upBtn, refreshBtn, uploadBtn, mkdirBtn, fileInput);
+  toolbar.append(upBtn, refreshBtn, uploadBtn, mkdirBtn, downloadTarBtn, fileInput);
 
   const mkdirPanel = document.createElement("div");
   mkdirPanel.className = "host9p-browser-mkdir-panel";
@@ -488,6 +497,29 @@ function renderHost9pBrowser(container, getVfs) {
 
   uploadBtn.addEventListener("click", () => {
     fileInput.click();
+  });
+
+  downloadTarBtn.addEventListener("click", () => {
+    const vfs = getVfs();
+    if (!vfs) {
+      setStatus("Host file share is not available.");
+      return;
+    }
+
+    downloadTarBtn.disabled = true;
+    setStatus("Building archive…");
+
+    void (async () => {
+      try {
+        const archive = await exportHost9pTarGz(vfs, currentPath);
+        downloadBytes(archive, defaultTarGzFilename(currentPath));
+        setStatus("");
+      } catch (err) {
+        setStatus(errorMessage(err));
+      } finally {
+        downloadTarBtn.disabled = false;
+      }
+    })();
   });
 
   fileInput.addEventListener("change", () => {
