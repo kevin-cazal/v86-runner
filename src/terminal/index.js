@@ -173,6 +173,9 @@ export function createVmTerminal(hostElement, options = {}) {
     focus() {
       terminal.focus();
     },
+    showCursor() {
+      terminal.write("\x1b[?25h");
+    },
     startResizeRetry,
     stopResizeRetry,
     dispose() {
