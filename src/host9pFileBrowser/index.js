@@ -114,6 +114,8 @@ function renderHost9pBrowser(container, getVfs) {
   let currentPath = "/";
   /** @type {string | null} */
   let renamingPath = null;
+  /** @type {string | null} */
+  let removingPath = null;
 
   const root = document.createElement("div");
   root.className = "host9p-browser";
@@ -209,6 +211,7 @@ function renderHost9pBrowser(container, getVfs) {
   container.append(root);
 
   function showMkdirPanel() {
+    clearEditing();
     mkdirPanel.hidden = false;
     mkdirInput.value = "";
     queueMicrotask(() => mkdirInput.focus());
@@ -217,6 +220,19 @@ function renderHost9pBrowser(container, getVfs) {
   function hideMkdirPanel() {
     mkdirPanel.hidden = true;
     mkdirInput.value = "";
+  }
+
+  function clearRename() {
+    renamingPath = null;
+  }
+
+  function clearRemove() {
+    removingPath = null;
+  }
+
+  function clearEditing() {
+    clearRename();
+    clearRemove();
   }
 
   /** @param {string} message */
@@ -245,7 +261,6 @@ function renderHost9pBrowser(container, getVfs) {
       return;
     }
 
-    renamingPath = null;
     updatePathHint();
 
     const entries = vfs.listEntries(currentPath);
@@ -308,7 +323,7 @@ function renderHost9pBrowser(container, getVfs) {
         ev.preventDefault();
         const newName = input.value.trim();
         if (!newName || newName === entry.name) {
-          renamingPath = null;
+          clearRename();
           refresh();
           return;
         }
@@ -316,7 +331,7 @@ function renderHost9pBrowser(container, getVfs) {
           const newPath = joinPath(parentPath(entry.path), newName);
           vfs.rename(entry.path, newPath);
           setStatus("");
-          renamingPath = null;
+          clearRename();
           refresh();
         } catch (err) {
           setStatus(errorMessage(err));
@@ -324,8 +339,8 @@ function renderHost9pBrowser(container, getVfs) {
       });
 
       cancelBtn.addEventListener("click", () => {
-        renamingPath = null;
-        refresh(() => input.focus());
+        clearRename();
+        refresh();
       });
 
       queueMicrotask(() => input.focus());
@@ -342,6 +357,7 @@ function renderHost9pBrowser(container, getVfs) {
           currentPath = entry.path;
           setStatus("");
           hideMkdirPanel();
+          clearEditing();
           refresh();
         });
       }
@@ -360,7 +376,49 @@ function renderHost9pBrowser(container, getVfs) {
     const actionsCell = document.createElement("td");
     actionsCell.className = "host9p-browser-actions-cell";
 
-    if (renamingPath !== entry.path) {
+    if (removingPath === entry.path) {
+      const confirmWrap = document.createElement("div");
+      confirmWrap.className = "host9p-browser-remove-confirm";
+
+      const msg = document.createElement("span");
+      msg.className = "host9p-browser-remove-msg";
+      const kind = entry.type === "directory" ? "directory" : "file";
+      msg.textContent = `Remove ${kind} “${entry.name}”?`;
+
+      const confirmBtn = document.createElement("button");
+      confirmBtn.type = "button";
+      confirmBtn.className =
+        "host9p-browser-btn host9p-browser-btn-small host9p-browser-btn-danger";
+      confirmBtn.textContent = "Remove";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "host9p-browser-btn host9p-browser-btn-small";
+      cancelBtn.textContent = "Cancel";
+
+      confirmBtn.addEventListener("click", () => {
+        try {
+          if (entry.type === "directory") {
+            vfs.rmdir(entry.path);
+          } else {
+            vfs.remove(entry.path);
+          }
+          setStatus("");
+          clearRemove();
+          refresh();
+        } catch (err) {
+          setStatus(errorMessage(err));
+        }
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        clearRemove();
+        refresh();
+      });
+
+      confirmWrap.append(msg, confirmBtn, cancelBtn);
+      actionsCell.append(confirmWrap);
+    } else if (renamingPath !== entry.path) {
       if (entry.type === "file") {
         const downloadBtn = document.createElement("button");
         downloadBtn.type = "button";
@@ -387,6 +445,8 @@ function renderHost9pBrowser(container, getVfs) {
       renameBtn.className = "host9p-browser-btn host9p-browser-btn-small";
       renameBtn.textContent = "Rename";
       renameBtn.addEventListener("click", () => {
+        hideMkdirPanel();
+        clearRemove();
         renamingPath = entry.path;
         setStatus("");
         refresh();
@@ -399,21 +459,11 @@ function renderHost9pBrowser(container, getVfs) {
         "host9p-browser-btn host9p-browser-btn-small host9p-browser-btn-danger";
       removeBtn.textContent = "Remove";
       removeBtn.addEventListener("click", () => {
-        const kind = entry.type === "directory" ? "folder" : "file";
-        if (!window.confirm(`Remove ${kind} “${entry.name}”?`)) {
-          return;
-        }
-        try {
-          if (entry.type === "directory") {
-            vfs.rmdir(entry.path);
-          } else {
-            vfs.remove(entry.path);
-          }
-          setStatus("");
-          refresh();
-        } catch (err) {
-          setStatus(errorMessage(err));
-        }
+        hideMkdirPanel();
+        clearRename();
+        removingPath = entry.path;
+        setStatus("");
+        refresh();
       });
       actionsCell.append(removeBtn);
     }
@@ -426,11 +476,13 @@ function renderHost9pBrowser(container, getVfs) {
     currentPath = parentPath(currentPath);
     setStatus("");
     hideMkdirPanel();
+    clearEditing();
     refresh();
   });
 
   refreshBtn.addEventListener("click", () => {
     setStatus("");
+    clearEditing();
     refresh();
   });
 

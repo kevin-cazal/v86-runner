@@ -731,3 +731,16 @@ body.plugin-popup-open {
   min-width: 8rem;
 }
 
+.host9p-browser-remove-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.host9p-browser-remove-msg {
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+  color: #ffb4a8;
+}
+
