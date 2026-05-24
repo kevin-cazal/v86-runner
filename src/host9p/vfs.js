@@ -209,17 +209,26 @@ export class Host9pVfs {
 
   Write(id, offset, count, buffer) {
     const inode = this.inodes[id];
+    const end = offset + count;
     let data = this.inodedata.get(id);
     if (!data) {
-      data = new Uint8Array(Math.max(offset + count, 128));
-    }
-    if (data.length < offset + count) {
-      const grown = new Uint8Array(Math.max(offset + count, Math.floor(data.length * 1.5) || 128));
+      data = new Uint8Array(Math.max(end, 128));
+    } else if (data.length < end) {
+      const grown = new Uint8Array(Math.max(end, Math.floor(data.length * 1.5) || 128));
       grown.set(data);
       data = grown;
     }
     data.set(buffer.subarray(0, count), offset);
-    this.setData(id, data);
+
+    const prev = this.inodedata.get(id);
+    if (prev) {
+      this.used_size -= prev.length;
+    }
+    this.inodedata.set(id, data);
+    inode.size = Math.max(inode.size, end);
+    inode.mtime = Math.round(Date.now() / 1000);
+    inode.qid.version = (inode.qid.version + 1) & 0xffff;
+    this.used_size += data.length;
     return count;
   }
 
