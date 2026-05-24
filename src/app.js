@@ -69,12 +69,6 @@ function syncGuestSize() {
   }
 }
 
-/** Clear host xterm after state restore; guest cleanup runs via hvc1 post-restore. */
-function restoreHostTerminalAfterStateLoad() {
-  term?.clear();
-  term?.showCursor();
-}
-
 function showTerminalView() {
   pickOverlay.hidden = true;
   loadOverlay.hidden = true;
@@ -211,11 +205,10 @@ async function onStateSelected(file) {
     setStatus("Loading memory…");
     const buffer = await readFileAsBuffer(file);
     await vm.restoreState(buffer);
-    restoreHostTerminalAfterStateLoad();
     syncGuestSize();
+    term?.showCursor();
     setStatus(`Running — ${diskLabel}`);
     term?.focus();
-    window.dispatchEvent(new CustomEvent("vm-state-restored"));
   } catch (err) {
     setStatus(err instanceof Error ? err.message : String(err));
     console.error(err);
@@ -318,7 +311,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
     if (resuming) {
-      restoreHostTerminalAfterStateLoad();
+      term.showCursor();
       setTimeout(() => syncGuestSize(), 50);
       setTimeout(() => syncGuestSize(), 1100);
     }
