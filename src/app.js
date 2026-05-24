@@ -69,6 +69,13 @@ function syncGuestSize() {
   }
 }
 
+/** Clear host xterm and guest hvc0 (virtio-console0) after state restore. */
+function clearHvc0Console() {
+  term?.clear();
+  vm?.sendConsoleInput("\x1b[2J\x1b[H");
+  term?.showCursor();
+}
+
 function showTerminalView() {
   pickOverlay.hidden = true;
   loadOverlay.hidden = true;
@@ -205,8 +212,8 @@ async function onStateSelected(file) {
     setStatus("Loading memory…");
     const buffer = await readFileAsBuffer(file);
     await vm.restoreState(buffer);
+    clearHvc0Console();
     syncGuestSize();
-    term?.showCursor();
     setStatus(`Running — ${diskLabel}`);
     term?.focus();
     window.dispatchEvent(new CustomEvent("vm-state-restored"));
@@ -312,7 +319,7 @@ async function bootWithBuffer(buffer, label, opts = {}) {
     term.startResizeRetry();
     setStatus(`Running — ${diskLabel}`);
     if (resuming) {
-      term.showCursor();
+      clearHvc0Console();
       setTimeout(() => syncGuestSize(), 50);
       setTimeout(() => syncGuestSize(), 1100);
     }
