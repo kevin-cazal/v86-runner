@@ -270,6 +270,37 @@ body {
   display: none;
 }
 
+.pick-launch-btn {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid #50e3c2;
+  border-radius: 6px;
+  background: #0d1f1c;
+  color: #50e3c2;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.pick-launch-btn:hover:not(:disabled) {
+  background: #14302b;
+}
+
+.pick-launch-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: #3a5a54;
+  color: #6a8a84;
+}
+
+.pick-file-name {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #aaa;
+  font-family: "IBM Plex Mono", "Liberation Mono", monospace;
+}
+
 .pick-error {
   margin: 0;
   color: #f66;

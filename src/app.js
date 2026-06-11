@@ -12,7 +12,12 @@ const statusEl = document.getElementById("status");
 const pickOverlay = document.getElementById("pick-overlay");
 const pickError = document.getElementById("pick-error");
 const diskInput = document.getElementById("disk-input");
+const pickLaunchBtn = document.getElementById("pick-launch-btn");
+const pickFileName = document.getElementById("pick-file-name");
 const stateInput = document.getElementById("state-input");
+const deferBootUntilLaunch = !!pickLaunchBtn;
+/** @type {File | null} */
+let pendingPickFile = null;
 const menuRoot = document.getElementById("menu-root");
 const loadOverlay = document.getElementById("load-overlay");
 const loadMessage = document.getElementById("load-message");
@@ -53,6 +58,28 @@ function showPickScreen() {
   menu.setHidden(true);
   resetPageTitle();
   setStatus("Choose a disk image");
+  if (deferBootUntilLaunch) {
+    pendingPickFile = null;
+    if (pickLaunchBtn) pickLaunchBtn.disabled = true;
+    if (pickFileName) {
+      pickFileName.hidden = true;
+      pickFileName.textContent = "";
+    }
+  }
+}
+
+function setPendingPickFile(file) {
+  pendingPickFile = file;
+  if (pickLaunchBtn) pickLaunchBtn.disabled = !file;
+  if (pickFileName) {
+    if (file) {
+      pickFileName.hidden = false;
+      pickFileName.textContent = file.name;
+    } else {
+      pickFileName.hidden = true;
+      pickFileName.textContent = "";
+    }
+  }
 }
 
 function showLoadScreen() {
@@ -396,8 +423,21 @@ async function onDiskSelected(file) {
 diskInput.addEventListener("change", () => {
   const file = diskInput.files?.[0];
   diskInput.value = "";
+  if (!file) return;
+  if (deferBootUntilLaunch) {
+    showPickError("");
+    setPendingPickFile(file);
+    return;
+  }
   onDiskSelected(file);
 });
+
+if (pickLaunchBtn) {
+  pickLaunchBtn.addEventListener("click", () => {
+    if (!pendingPickFile) return;
+    onDiskSelected(pendingPickFile);
+  });
+}
 
 stateInput.addEventListener("change", () => {
   const file = stateInput.files?.[0];
